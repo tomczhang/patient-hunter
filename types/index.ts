@@ -22,3 +22,22 @@ export interface LegendItem {
   color: string;
   label: string;
 }
+
+/** 资产配置项 */
+export interface Asset {
+  ticker: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  allocation: number;
+  value: string;
+  performance: string;
+  performanceType: "up" | "neutral";
+}
+
+/** 资产类型选项（添加资产表单用） */
+export interface AssetTypeOption {
+  id: string;
+  label: string;
+  icon: string; // SVG path d attribute
+}

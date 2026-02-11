@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { PORTFOLIO_TABS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-export default function TabsRow() {
-  const [active, setActive] = useState(0);
+interface TabsRowProps {
+  activeTab: number;
+  onTabChange: (index: number) => void;
+}
 
+export default function TabsRow({ activeTab, onTabChange }: TabsRowProps) {
   return (
     <div className="tabs-row">
       {PORTFOLIO_TABS.map((label, i) => (
         <div
           key={label}
-          className={cn("tab", i === active && "active")}
-          onClick={() => setActive(i)}
+          className={cn("tab", i === activeTab && "active")}
+          onClick={() => onTabChange(i)}
         >
           <span>{label}</span>
         </div>
