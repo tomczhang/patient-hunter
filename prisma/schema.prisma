@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ 用户 ============
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  portfolios    Portfolio[]
+  notes         Note[]
+  analyses      Analysis[]
+  operationLogs OperationLog[]
+
+  @@map("users")
+}
+
+// ============ 投资组合 ============
+
+model Portfolio {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  name         String   // e.g. "进取仓", "稳健仓", "防守仓"
+  riskCategory String   @map("risk_category") // aggressive | balanced | defensive
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id])
+  positions Position[]
+  trades    Trade[]
+
+  @@map("portfolios")
+}
+
+// ============ 持仓 ============
+
+model Position {
+  id          Int      @id @default(autoincrement())
+  portfolioId Int      @map("portfolio_id")
+  ticker      String
+  name        String
+  exchange    String?  // NASDAQ, HKEX, SSE, SZSE
+  quantity    Int
+  costPrice   Float    @map("cost_price")
+  currency    String   @default("USD") // USD, HKD, CNY
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
+
+  @@map("positions")
+}
+
+// ============ 交易记录 ============
+
+model Trade {
+  id          Int      @id @default(autoincrement())
+  portfolioId Int      @map("portfolio_id")
+  ticker      String
+  name        String
+  action      String   // buy | sell
+  quantity    Int
+  price       Float
+  currency    String   @default("USD")
+  tradedAt    DateTime @map("traded_at")
+  memo        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
+
+  @@map("trades")
+}
+
+// ============ 用户笔记 ============
+
+model Note {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  title          String
+  content        String   // 原文
+  qdrantDocId    String?  @map("qdrant_doc_id") // 关联向量库
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notes")
+}
+
+// ============ 股票分析 ============
+
+model Analysis {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  ticker      String
+  title       String
+  content     Json     // JSONB — 灵活存储分析结构化数据
+  source      String?  // manual | ai_ocr | ai_generated
+  qdrantDocId String?  @map("qdrant_doc_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("analyses")
+}
+
+// ============ 操作日志 ============
+
+model OperationLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String   // e.g. "create_position", "execute_trade", "upload_screenshot"
+  detail    Json?    // JSONB — 操作详情
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("operation_logs")
+}
