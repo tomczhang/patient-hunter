@@ -45,17 +45,3 @@ export const CURRENCIES = [
   { value: "CNY", label: "CNY — 人民币" },
 ];
 
-/** 模拟股票搜索数据 */
-export const MOCK_STOCKS = [
-  { ticker: "AAPL", name: "Apple Inc.", exchange: "NASDAQ" },
-  { ticker: "MSFT", name: "Microsoft Corporation", exchange: "NASDAQ" },
-  { ticker: "GOOGL", name: "Alphabet Inc.", exchange: "NASDAQ" },
-  { ticker: "AMZN", name: "Amazon.com Inc.", exchange: "NASDAQ" },
-  { ticker: "TSLA", name: "Tesla Inc.", exchange: "NASDAQ" },
-  { ticker: "NVDA", name: "NVIDIA Corporation", exchange: "NASDAQ" },
-  { ticker: "META", name: "Meta Platforms Inc.", exchange: "NASDAQ" },
-  { ticker: "0700.HK", name: "腾讯控股", exchange: "HKEX" },
-  { ticker: "9988.HK", name: "阿里巴巴", exchange: "HKEX" },
-  { ticker: "600519.SH", name: "贵州茅台", exchange: "SSE" },
-  { ticker: "000858.SZ", name: "五粮液", exchange: "SZSE" },
-];

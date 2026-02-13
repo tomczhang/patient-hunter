@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { RISK_CATEGORIES, CURRENCIES, MOCK_STOCKS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { RISK_CATEGORIES, CURRENCIES } from "@/lib/constants";
 
 interface StockItem {
   ticker: string;
   name: string;
-  exchange: string;
+  nameCN?: string;
+  primaryExchange: string;
 }
 
 interface AddAssetFormProps {
@@ -27,14 +27,10 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
   const [searchText, setSearchText] = useState("");
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
-
-  const filteredStocks = useMemo(() => {
-    if (!searchText.trim()) return [];
-    const q = searchText.toLowerCase();
-    return MOCK_STOCKS.filter(
-      (s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q),
-    );
-  }, [searchText]);
+  const [searchResults, setSearchResults] = useState<StockItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---- 表单字段 ---- */
   const [riskCategory, setRiskCategory] = useState("aggressive");
@@ -50,11 +46,63 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
       ? `${currencySymbol}${(parseFloat(quantity) * parseFloat(pricePerShare)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : `${currencySymbol}0.00`;
 
+  /* ---- 异步搜索 (防抖 300ms) ---- */
+  const doSearch = useCallback(async (query: string) => {
+    if (query.trim().length < 1) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+
+    try {
+      const res = await fetch(`/api/stock/search?q=${encodeURIComponent(query)}&limit=10`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "搜索失败");
+      }
+      const data = await res.json();
+      setSearchResults(data.results ?? []);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "搜索失败，请重试";
+      setSearchError(message);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (searchText.trim().length < 1) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    debounceTimer.current = setTimeout(() => {
+      doSearch(searchText);
+    }, 300);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [searchText, doSearch]);
+
   /* ---- 选中股票 ---- */
   const handleSelectStock = (stock: StockItem) => {
     setSelectedStock(stock);
     setSearchText("");
     setShowDropdown(false);
+    setSearchResults([]);
   };
 
   const handleClearStock = () => {
@@ -77,6 +125,9 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
     onCancel();
   };
 
+  /* ---- 展示名称（优先中文） ---- */
+  const displayName = (stock: StockItem) => stock.nameCN || stock.name;
+
   return (
     <>
       {/* Ticker 搜索 */}
@@ -86,7 +137,7 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
           <input
             type="text"
             className="form-input"
-            placeholder="按名称或代码搜索（如 AAPL、腾讯）…"
+            placeholder="按名称或代码搜索（如 AAPL、苹果）…"
             value={searchText}
             onChange={(e) => {
               setSearchText(e.target.value);
@@ -101,9 +152,24 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
         </div>
 
         {/* 搜索下拉 */}
-        {showDropdown && filteredStocks.length > 0 && (
+        {showDropdown && searchText.trim().length > 0 && (
           <div className="search-dropdown">
-            {filteredStocks.map((s) => (
+            {isSearching && (
+              <div className="search-dropdown-item" style={{ justifyContent: "center", color: "var(--text-tertiary)" }}>
+                搜索中...
+              </div>
+            )}
+            {!isSearching && searchError && (
+              <div className="search-dropdown-item" style={{ justifyContent: "center", color: "#e53e3e" }}>
+                {searchError}
+              </div>
+            )}
+            {!isSearching && !searchError && searchResults.length === 0 && searchText.trim().length > 0 && (
+              <div className="search-dropdown-item" style={{ justifyContent: "center", color: "var(--text-tertiary)" }}>
+                未找到匹配的股票
+              </div>
+            )}
+            {!isSearching && searchResults.map((s) => (
               <div
                 key={s.ticker}
                 className="search-dropdown-item"
@@ -111,8 +177,10 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
               >
                 <span className="ticker-chip">{s.ticker}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{s.exchange}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{displayName(s)}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+                    {s.nameCN && s.name !== s.nameCN ? `${s.name} · ` : ""}{s.primaryExchange || "US"}
+                  </div>
                 </div>
               </div>
             ))}
@@ -125,8 +193,10 @@ export default function AddAssetForm({ onCancel }: AddAssetFormProps) {
         <div className="ticker-preview">
           <span className="ticker-chip">{selectedStock.ticker}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{selectedStock.name}</div>
-            <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{selectedStock.exchange}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{displayName(selectedStock)}</div>
+            <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+              {selectedStock.nameCN && selectedStock.name !== selectedStock.nameCN ? `${selectedStock.name} · ` : ""}{selectedStock.primaryExchange || "US"}
+            </div>
           </div>
           <button className="btn-clear-stock" onClick={handleClearStock} aria-label="清除">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

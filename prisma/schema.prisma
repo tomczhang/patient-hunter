@@ -116,6 +116,20 @@ model Analysis {
   @@map("analyses")
 }
 
+// ============ 股票中文名称映射 ============
+
+model StockNameCN {
+  id        Int      @id @default(autoincrement())
+  ticker    String   @unique // e.g. "AAPL"
+  nameEN    String   @map("name_en")  // 英文名 e.g. "Apple Inc."
+  nameCN    String   @map("name_cn")  // 中文名 e.g. "苹果公司"
+  source    String   @default("seed") // seed | llm | manual
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("stock_name_cn")
+}
+
 // ============ 操作日志 ============
 
 model OperationLog {

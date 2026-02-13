@@ -47,6 +47,8 @@ body {
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0; /* 允许 flex 子元素收缩，支持内部滚动 */
+  overflow: hidden;
 }
 
 /* Meta Header */
