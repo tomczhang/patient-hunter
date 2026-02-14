@@ -3,10 +3,14 @@
 export interface ApiParam {
   key: string;
   in: "path" | "query" | "body";
+  /** 参数类型，默认 text；file 表示文件上传 */
+  type?: "text" | "file";
   required: boolean;
   placeholder?: string;
   default?: string;
   description?: string;
+  /** 文件上传时限制的 MIME 类型 */
+  accept?: string;
 }
 
 export interface ApiEndpoint {
@@ -30,6 +34,18 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     params: [],
   },
 
+  /* ---- 工具 ---- */
+  {
+    name: "图片上传",
+    method: "POST",
+    path: "/api/upload",
+    group: "工具",
+    description: "上传图片并返回 Base64 Data URL（multipart/form-data）",
+    params: [
+      { key: "file", in: "body", type: "file", required: true, description: "图片文件（png/jpeg/webp/gif，≤10MB）", accept: "image/png,image/jpeg,image/webp,image/gif" },
+    ],
+  },
+
   /* ---- AI ---- */
   {
     name: "图片 OCR",
@@ -43,6 +59,21 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     ],
     bodyExample: JSON.stringify(
       { imageBase64: "data:image/png;base64,...", prompt: "请提取这张图片中的所有文字内容" },
+      null,
+      2,
+    ),
+  },
+  {
+    name: "图片智能解析",
+    method: "POST",
+    path: "/api/ai/parse",
+    group: "AI",
+    description: "自动分类图片类型并提取结构化数据（交易记录 / 持仓截图）",
+    params: [
+      { key: "imageBase64", in: "body", required: true, description: "图片 Base64 Data URL" },
+    ],
+    bodyExample: JSON.stringify(
+      { imageBase64: "data:image/png;base64,..." },
       null,
       2,
     ),
@@ -93,6 +124,14 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     params: [
       { key: "ticker", in: "path", required: true, placeholder: "AAPL", description: "股票代码" },
     ],
+  },
+  {
+    name: "宽指跌幅",
+    method: "GET",
+    path: "/api/stock/index-drop",
+    group: "股票",
+    description: "宽指组合跌幅判断（70% VOO + 30% QQQM）",
+    params: [],
   },
 ];
 

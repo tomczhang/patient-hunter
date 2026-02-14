@@ -14,14 +14,18 @@
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.24",
+    "@langchain/openai": "^1.2.7",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "dotenv": "^17.2.4",
+    "langchain": "^1.2.24",
     "next": "16.1.6",
     "pg": "^8.18.0",
     "prisma": "^7.3.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -45,8 +45,10 @@ export default function ApiTesterPage() {
   const [resp, setResp] = useState<{ status: number; time: number; body: string } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const api = API_ENDPOINTS[selected];
+  const hasFileParam = api.params.some((p) => p.type === "file");
 
   /* 加载历史 */
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function ApiTesterPage() {
     setParams(defaults);
     setBodyText(api.bodyExample ?? "");
     setResp(null);
+    setSelectedFile(null);
   }, [selected, api]);
 
   /* 构建 URL */
@@ -93,7 +96,15 @@ export default function ApiTesterPage() {
 
     try {
       const opts: RequestInit = { method: api.method };
-      if (api.method !== "GET" && bodyText.trim()) {
+      if (hasFileParam && selectedFile) {
+        const fd = new FormData();
+        api.params.forEach((p) => {
+          if (p.type === "file" && selectedFile) {
+            fd.append(p.key, selectedFile);
+          }
+        });
+        opts.body = fd;
+      } else if (api.method !== "GET" && bodyText.trim()) {
         opts.headers = { "Content-Type": "application/json" };
         opts.body = bodyText;
       }
@@ -225,8 +236,58 @@ export default function ApiTesterPage() {
           </div>
         )}
 
+        {/* 文件上传 */}
+        {hasFileParam && (
+          <div style={S.section}>
+            <h4 style={S.sectionTitle}>文件上传</h4>
+            <div style={S.fileZone}>
+              <input
+                id="file-upload"
+                type="file"
+                accept={api.params.find((p) => p.type === "file")?.accept || "image/*"}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setSelectedFile(f);
+                }}
+              />
+              <label htmlFor="file-upload" style={S.fileLabel}>
+                {selectedFile ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    📎 {selectedFile.name}
+                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                      ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </span>
+                ) : (
+                  <span>📂 点击选择文件</span>
+                )}
+              </label>
+              {selectedFile && (
+                <button
+                  style={S.fileClear}
+                  onClick={() => {
+                    setSelectedFile(null);
+                    const input = document.getElementById("file-upload") as HTMLInputElement;
+                    if (input) input.value = "";
+                  }}
+                >
+                  ✕ 移除
+                </button>
+              )}
+            </div>
+            {selectedFile && selectedFile.type.startsWith("image/") && (
+              <img
+                src={URL.createObjectURL(selectedFile)}
+                alt="preview"
+                style={S.filePreview}
+              />
+            )}
+          </div>
+        )}
+
         {/* Body */}
-        {api.params.some((p) => p.in === "body") && (
+        {api.params.some((p) => p.in === "body" && p.type !== "file") && (
           <div style={S.section}>
             <h4 style={S.sectionTitle}>请求体 (JSON)</h4>
             <textarea
@@ -484,6 +545,41 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 6,
   },
   respTime: { fontFamily: "var(--font-family-mono)", fontSize: 12, color: "var(--text-tertiary)" },
+  fileZone: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  fileLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "10px 20px",
+    border: "2px dashed var(--border-light)",
+    borderRadius: 10,
+    background: "#FAFAFA",
+    cursor: "pointer",
+    fontFamily: "var(--font-family-mono)",
+    fontSize: 13,
+    color: "var(--text-secondary)",
+    transition: "border-color .15s, background .15s",
+  },
+  fileClear: {
+    border: "none",
+    background: "transparent",
+    color: "#DC2626",
+    cursor: "pointer",
+    fontFamily: "var(--font-family-mono)",
+    fontSize: 12,
+    padding: "4px 8px",
+    borderRadius: 6,
+  },
+  filePreview: {
+    maxWidth: 320,
+    maxHeight: 200,
+    borderRadius: 8,
+    border: "1px solid var(--border-light)",
+    objectFit: "contain" as const,
+  },
   respBody: {
     fontFamily: "var(--font-family-mono)",
     fontSize: 12,

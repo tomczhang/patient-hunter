@@ -125,5 +125,13 @@ export interface SixMonthHigh {
   dropFromHigh: number;  // 距离高点跌幅百分比
 }
 
+/** 宽指组合跌幅 */
+export interface IndexDrop {
+  voo: SixMonthHigh;
+  qqqm: SixMonthHigh;
+  combinedDrop: number;   // 加权跌幅百分比（保留两位小数）
+  weights: { voo: number; qqqm: number };
+}
+
 /** Timespan 枚举 */
 export type Timespan = "minute" | "hour" | "day" | "week" | "month";

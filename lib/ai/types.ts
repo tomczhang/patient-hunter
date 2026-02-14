@@ -1,38 +1,10 @@
-/** Chat message content — 文本 */
-export interface TextContent {
-  type: "text";
-  text: string;
-}
+/**
+ * AI 模块类型定义
+ * 注：底层已切换为 LangChain，此文件保留业务层复用的类型
+ */
 
-/** Chat message content — 图片 */
-export interface ImageContent {
-  type: "image_url";
-  image_url: { url: string };
-}
-
-/** Chat message */
-export interface ChatMessage {
+/** 简单对话消息（供 chatCompletion 使用） */
+export interface SimpleMessage {
   role: "system" | "user" | "assistant";
-  content: string | (TextContent | ImageContent)[];
-}
-
-/** OpenAI chat completion 请求参数 */
-export interface ChatCompletionRequest {
-  model: string;
-  messages: ChatMessage[];
-  max_tokens?: number;
-  temperature?: number;
-}
-
-/** OpenAI chat completion 响应 */
-export interface ChatCompletionResponse {
-  choices: {
-    message: { role: string; content: string };
-    finish_reason: string;
-  }[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+  content: string;
 }

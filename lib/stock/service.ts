@@ -6,6 +6,7 @@ import type {
   StockDetail,
   OHLCBar,
   SixMonthHigh,
+  IndexDrop,
   Timespan,
   MassiveTickerListItem,
 } from "./types";
@@ -203,6 +204,24 @@ export async function getSixMonthHigh(ticker: string): Promise<SixMonthHigh | nu
     currentPrice,
     dropFromHigh: Math.round(dropFromHigh * 100) / 100,
   };
+}
+
+/**
+ * 宽指组合跌幅：70% VOO + 30% QQQM
+ */
+export async function getIndexDrop(): Promise<IndexDrop | null> {
+  const [voo, qqqm] = await Promise.all([
+    getSixMonthHigh("VOO"),
+    getSixMonthHigh("QQQM"),
+  ]);
+
+  if (!voo || !qqqm) return null;
+
+  const weights = { voo: 0.7, qqqm: 0.3 };
+  const combinedDrop =
+    Math.round((weights.voo * voo.dropFromHigh + weights.qqqm * qqqm.dropFromHigh) * 100) / 100;
+
+  return { voo, qqqm, combinedDrop, weights };
 }
 
 // ============ 工具函数 ============
