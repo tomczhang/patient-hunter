@@ -20,11 +20,13 @@
     "@prisma/client": "^7.3.0",
     "dotenv": "^17.2.4",
     "langchain": "^1.2.24",
+    "longport": "^3.0.22",
     "next": "16.1.6",
     "pg": "^8.18.0",
     "prisma": "^7.3.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "yahoo-finance2": "^3.13.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

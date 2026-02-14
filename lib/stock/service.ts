@@ -91,6 +91,8 @@ export async function searchStocks(
       where: { nameCN: { contains: query } },
       take: limit,
     });
+
+    console.log("records", records);
     return records.map((r) => ({
       ticker: r.ticker,
       name: r.nameEN,

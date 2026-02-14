@@ -125,6 +125,14 @@ const STOCK_NAMES: { ticker: string; nameEN: string; nameCN: string }[] = [
   { ticker: "ZH", nameEN: "Zhihu Inc.", nameCN: "知乎" },
   { ticker: "FUTU", nameEN: "Futu Holdings Limited", nameCN: "富途" },
   { ticker: "TIGR", nameEN: "UP Fintech Holding", nameCN: "老虎证券" },
+
+  // ===== 港股 =====
+  { ticker: "9992.HK", nameEN: "Pop Mart International Group Ltd.", nameCN: "泡泡玛特" },
+  { ticker: "0175.HK", nameEN: "Geely Automobile Holdings Ltd.", nameCN: "吉利汽车" },
+  { ticker: "1816.HK", nameEN: "CGN Power Co. Ltd.", nameCN: "中广核电力" },
+
+  // ===== A股 =====
+  { ticker: "600519.SS", nameEN: "Kweichow Moutai Co. Ltd.", nameCN: "贵州茅台" },
 ];
 
 async function main() {

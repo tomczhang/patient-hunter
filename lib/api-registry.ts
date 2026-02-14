@@ -92,6 +92,16 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     ],
   },
   {
+    name: "AI 股票搜索",
+    method: "GET",
+    path: "/api/stock/ai-search",
+    group: "股票",
+    description: "LLM 智能搜索股票（覆盖美股、港股、A股）",
+    params: [
+      { key: "q", in: "query", required: true, placeholder: "腾讯", description: "搜索关键词（中英文均可）" },
+    ],
+  },
+  {
     name: "股票详情",
     method: "GET",
     path: "/api/stock/{ticker}",
