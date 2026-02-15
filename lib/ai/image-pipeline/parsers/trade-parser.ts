@@ -9,13 +9,18 @@ import { PARSE_TRADE_PROMPT } from "@/lib/ai/prompts";
  */
 export async function parseTrades(
   imageUrl: string,
+  context?: string,
 ): Promise<TradeParseResult> {
   const model = await getModel("vision");
   const structured = model.withStructuredOutput(TradeParseSchema);
 
+  const prompt = context
+    ? `${PARSE_TRADE_PROMPT}\n\n用户附带说明：${context}`
+    : PARSE_TRADE_PROMPT;
+
   const message = new HumanMessage({
     content: [
-      { type: "text", text: PARSE_TRADE_PROMPT },
+      { type: "text", text: prompt },
       { type: "image_url", image_url: { url: imageUrl } },
     ],
   });

@@ -9,13 +9,18 @@ import { PARSE_POSITION_PROMPT } from "@/lib/ai/prompts";
  */
 export async function parsePositions(
   imageUrl: string,
+  context?: string,
 ): Promise<PositionParseResult> {
   const model = await getModel("vision");
   const structured = model.withStructuredOutput(PositionParseSchema);
 
+  const prompt = context
+    ? `${PARSE_POSITION_PROMPT}\n\n用户附带说明：${context}`
+    : PARSE_POSITION_PROMPT;
+
   const message = new HumanMessage({
     content: [
-      { type: "text", text: PARSE_POSITION_PROMPT },
+      { type: "text", text: prompt },
       { type: "image_url", image_url: { url: imageUrl } },
     ],
   });

@@ -5,12 +5,12 @@ import { parseImage } from "@/lib/ai/image-pipeline/pipeline";
  * POST /api/ai/parse
  * 智能图片解析：自动分类 + 结构化提取
  *
- * Body: { imageBase64: "data:image/png;base64,..." }
+ * Body: { imageBase64: "data:image/png;base64,...", context?: "用户附带的文字说明" }
  * Response: { type, confidence, reason, data, rawText? }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64 } = await req.json();
+    const { imageBase64, context } = await req.json();
 
     if (!imageBase64) {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await parseImage(imageBase64);
+    const result = await parseImage(imageBase64, context);
     return NextResponse.json(result);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "未知错误";

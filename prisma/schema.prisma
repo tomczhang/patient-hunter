@@ -123,6 +123,7 @@ model StockNameCN {
   ticker    String   @unique // e.g. "AAPL"
   nameEN    String   @map("name_en")  // 英文名 e.g. "Apple Inc."
   nameCN    String   @map("name_cn")  // 中文名 e.g. "苹果公司"
+  market    String   @default("US")   // US | HK | CN
   source    String   @default("seed") // seed | llm | manual
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

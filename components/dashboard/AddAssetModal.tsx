@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
-import AddAssetForm from "./AddAssetForm";
-import ScreenshotUpload from "./ScreenshotUpload";
-import { cn } from "@/lib/utils";
+import FeatureBar from "./FeatureBar";
+import ChatInput from "./ChatInput";
+import AssetConfirmTable from "./AssetConfirmTable";
+import type { ImageParseOutput } from "@/lib/ai/image-pipeline/types";
 
-type TabId = "screenshot" | "form";
+type Phase = "input" | "result";
 
 interface AddAssetModalProps {
   open: boolean;
@@ -14,34 +15,76 @@ interface AddAssetModalProps {
 }
 
 export default function AddAssetModal({ open, onClose }: AddAssetModalProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("screenshot");
+  const [phase, setPhase] = useState<Phase>("input");
+  const [injectedText, setInjectedText] = useState<string | null>(null);
+  const [parseResult, setParseResult] = useState<ImageParseOutput | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "screenshot", label: "上传截图" },
-    { id: "form", label: "填写表单" },
-  ];
+  /* ---- FeatureBar → inject ---- */
+  const handleInject = useCallback((text: string) => {
+    setInjectedText(text);
+  }, []);
+
+  /* ---- ChatInput → 解析成功 ---- */
+  const handleParseResult = useCallback((result: ImageParseOutput) => {
+    setParseResult(result);
+    setErrorMsg(null);
+    setPhase("result");
+  }, []);
+
+  /* ---- ChatInput → 解析失败 ---- */
+  const handleParseError = useCallback((error: string) => {
+    setErrorMsg(error);
+  }, []);
+
+  /* ---- AssetConfirmTable → 确认 ---- */
+  const handleConfirm = useCallback((data: unknown) => {
+    console.log("确认添加资产:", data);
+    setPhase("input");
+    setParseResult(null);
+    setErrorMsg(null);
+    onClose();
+  }, [onClose]);
+
+  /* ---- AssetConfirmTable → 重新输入 ---- */
+  const handleRetry = useCallback(() => {
+    setPhase("input");
+    setParseResult(null);
+    setErrorMsg(null);
+  }, []);
 
   return (
     <Modal open={open} onClose={onClose}>
-      {/* 标题 */}
-      <h2 className="section-title" style={{ marginBottom: 16, fontFamily: "var(--font-family-mono)" }}>新增资产</h2>
+      <h2 className="section-title" style={{ marginBottom: 16, fontFamily: "var(--font-family-mono)" }}>
+        新增资产
+      </h2>
 
-      {/* Tab 切换 */}
-      <div className="modal-tabs">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            className={cn("modal-tab", activeTab === t.id && "active")}
-            onClick={() => setActiveTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* 输入态 */}
+      {phase === "input" && (
+        <>
+          <FeatureBar onInject={handleInject} />
 
-      {/* Tab 内容 */}
-      {activeTab === "screenshot" && <ScreenshotUpload onClose={onClose} />}
-      {activeTab === "form" && <AddAssetForm onCancel={onClose} />}
+          <ChatInput
+            injectedText={injectedText}
+            onInjectedTextConsumed={() => setInjectedText(null)}
+            onParseResult={handleParseResult}
+            onParseError={handleParseError}
+          />
+
+          {errorMsg && (
+            <div className="chat-error">{errorMsg}</div>
+          )}
+        </>
+      )}
+
+      {/* 结果态 */}
+      {phase === "result" && parseResult && (
+        <AssetConfirmTable
+          result={parseResult}
+          onConfirm={handleConfirm}
+          onRetry={handleRetry}
+        />
+      )}
     </Modal>
   );
 }
