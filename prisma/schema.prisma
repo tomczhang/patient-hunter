@@ -10,17 +10,25 @@ datasource db {
 // ============ 用户 ============
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  phone           String   @unique // 带国家代码，如 "+8613800138000"
+  name            String?
+  avatarUrl       String?  @map("avatar_url")
+  primaryCurrency String   @default("USD") @map("primary_currency") // USD | CNY | HKD，根据手机号国家自动判断
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  portfolios    Portfolio[]
-  notes         Note[]
-  analyses      Analysis[]
-  operationLogs OperationLog[]
+  portfolios         Portfolio[]
+  notes              Note[]
+  analyses           Analysis[]
+  operationLogs      OperationLog[]
+  watchedStocks      WatchedStock[]
+  userRules          UserRule[]
+  portfolioSnapshots PortfolioSnapshot[]
+  contentSources     ContentSource[]
+  calendarEvents     CalendarEvent[]
+  notifications      Notification[]
 
   @@map("users")
 }
@@ -30,15 +38,16 @@ model User {
 model Portfolio {
   id           Int      @id @default(autoincrement())
   userId       Int      @map("user_id")
-  name         String   // e.g. "进取仓", "稳健仓", "防守仓"
+  name         String // e.g. "进取仓", "稳健仓", "防守仓"
   riskCategory String   @map("risk_category") // aggressive | balanced | defensive
   description  String?
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user      User       @relation(fields: [userId], references: [id])
+  user      User                @relation(fields: [userId], references: [id])
   positions Position[]
   trades    Trade[]
+  snapshots PortfolioSnapshot[]
 
   @@map("portfolios")
 }
@@ -50,7 +59,7 @@ model Position {
   portfolioId Int      @map("portfolio_id")
   ticker      String
   name        String
-  exchange    String?  // NASDAQ, HKEX, SSE, SZSE
+  exchange    String? // NASDAQ, HKEX, SSE, SZSE
   quantity    Int
   costPrice   Float    @map("cost_price")
   currency    String   @default("USD") // USD, HKD, CNY
@@ -69,7 +78,7 @@ model Trade {
   portfolioId Int      @map("portfolio_id")
   ticker      String
   name        String
-  action      String   // buy | sell
+  action      String // buy | sell
   quantity    Int
   price       Float
   currency    String   @default("USD")
@@ -85,13 +94,13 @@ model Trade {
 // ============ 用户笔记 ============
 
 model Note {
-  id             Int      @id @default(autoincrement())
-  userId         Int      @map("user_id")
-  title          String
-  content        String   // 原文
-  qdrantDocId    String?  @map("qdrant_doc_id") // 关联向量库
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  title       String
+  content     String // 原文
+  qdrantDocId String?  @map("qdrant_doc_id") // 关联向量库
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -105,8 +114,8 @@ model Analysis {
   userId      Int      @map("user_id")
   ticker      String
   title       String
-  content     Json     // JSONB — 灵活存储分析结构化数据
-  source      String?  // manual | ai_ocr | ai_generated
+  content     Json // JSONB — 灵活存储分析结构化数据
+  source      String? // manual | ai_ocr | ai_generated
   qdrantDocId String?  @map("qdrant_doc_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -121,9 +130,9 @@ model Analysis {
 model StockNameCN {
   id        Int      @id @default(autoincrement())
   ticker    String   @unique // e.g. "AAPL"
-  nameEN    String   @map("name_en")  // 英文名 e.g. "Apple Inc."
-  nameCN    String   @map("name_cn")  // 中文名 e.g. "苹果公司"
-  market    String   @default("US")   // US | HK | CN
+  nameEN    String   @map("name_en") // 英文名 e.g. "Apple Inc."
+  nameCN    String   @map("name_cn") // 中文名 e.g. "苹果公司"
+  market    String   @default("US") // US | HK | CN
   source    String   @default("seed") // seed | llm | manual
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -136,12 +145,190 @@ model StockNameCN {
 model OperationLog {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
-  action    String   // e.g. "create_position", "execute_trade", "upload_screenshot"
-  detail    Json?    // JSONB — 操作详情
+  action    String // e.g. "create_position", "execute_trade", "upload_screenshot"
+  detail    Json? // JSONB — 操作详情
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@map("operation_logs")
+}
+
+// ============ 仓位快照 ============
+
+model PortfolioSnapshot {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  portfolioId   Int?     @map("portfolio_id") // null 表示全仓快照
+  snapshotDate  DateTime @map("snapshot_date") // 快照日期（前一天的日期）
+  snapshotType  String   @map("snapshot_type") // daily | weekly | monthly
+  totalValue    Json     @map("total_value") // { "USD": 1000, "HKD": 5000, "CNY": 30000, "totalInPrimaryCurrency": 15000 }
+  positions     Json // 完整的 Position 信息 + 快照时的市值 { ticker, name, quantity, costPrice, currency, currentPrice, marketValue, pnl }
+  exchangeRates Json     @map("exchange_rates") // { "USD": 1.0, "HKD": 7.8, "CNY": 7.2 }
+  metadata      Json? // 其他元数据
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id])
+  portfolio Portfolio? @relation(fields: [portfolioId], references: [id])
+
+  @@index([userId, snapshotDate])
+  @@index([userId, snapshotType, snapshotDate])
+  @@index([portfolioId, snapshotDate])
+  @@map("portfolio_snapshots")
+}
+
+// ============ 关注的股票 ============
+
+model WatchedStock {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  ticker    String
+  name      String
+  notes     String? // 用户备注
+  alerts    Json? // JSON: 价格提醒配置 [{ type: "price", value: 200, direction: "above" }, { type: "change", percent: 5 }]
+  addedAt   DateTime @default(now()) @map("added_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, ticker])
+  @@index([userId])
+  @@map("watched_stocks")
+}
+
+// ============ 规则模板（全局预设规则） ============
+
+model RuleTemplate {
+  id              Int      @id @default(autoincrement())
+  ruleId          String   @unique @map("rule_id") // 全局唯一规则ID，如 "position_cash_ratio"
+  name            String
+  description     String?
+  version         String   @default("1.0.0") // 规则版本号
+  parameterSchema Json     @map("parameter_schema") // JSON Schema: 参数结构定义
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  userRules UserRule[]
+
+  @@map("rule_templates")
+}
+
+// ============ 用户规则实例 ============
+
+model UserRule {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  ruleTemplateId Int      @map("rule_template_id")
+  type           String // stock | portfolio | global
+  targetId       String?  @map("target_id") // ticker 或 portfolioId，根据 type 决定
+  parameters     Json // JSON: 用户配置的参数
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user         User                  @relation(fields: [userId], references: [id])
+  ruleTemplate RuleTemplate          @relation(fields: [ruleTemplateId], references: [id])
+  executions   DisciplineExecution[]
+
+  @@index([userId, type, targetId])
+  @@map("user_rules")
+}
+
+// ============ 规则执行历史 ============
+
+model DisciplineExecution {
+  id         Int      @id @default(autoincrement())
+  userRuleId Int      @map("user_rule_id")
+  status     String // completed | partial | failed
+  reason     String? // 部分执行或未执行的原因
+  executedAt DateTime @default(now()) @map("executed_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  userRule UserRule @relation(fields: [userRuleId], references: [id])
+
+  @@index([userRuleId, executedAt])
+  @@map("discipline_executions")
+}
+
+// ============ 内容源（金融教练） ============
+
+model ContentSource {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  type       String // wechat_public | document | rss | manual
+  name       String
+  url        String? // 如果是 URL 类型
+  config     Json? // JSON: 配置信息
+  lastSyncAt DateTime? @map("last_sync_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user  User          @relation(fields: [userId], references: [id])
+  items ContentItem[]
+
+  @@index([userId])
+  @@map("content_sources")
+}
+
+// ============ 内容项（文章/文档） ============
+
+model ContentItem {
+  id          Int       @id @default(autoincrement())
+  sourceId    Int       @map("source_id")
+  title       String
+  content     String // 提取的文本内容（PDF/Word/TXT 解析后的纯文本）
+  publishedAt DateTime? @map("published_at")
+  qdrantDocId String?   @map("qdrant_doc_id") // 向量化
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  source ContentSource @relation(fields: [sourceId], references: [id])
+
+  @@index([sourceId, publishedAt])
+  @@map("content_items")
+}
+
+// ============ 日历事件 ============
+
+model CalendarEvent {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  title       String
+  description String?
+  eventType   String    @map("event_type") // trade_reminder | rebalance | review | custom
+  scheduledAt DateTime  @map("scheduled_at") // 计划时间
+  completedAt DateTime? @map("completed_at") // 完成时间（可选）
+  relatedId   String?   @map("related_id") // 关联的 Trade/Portfolio/Discipline ID
+  repeatRule  Json?     @map("repeat_rule") // JSON: { frequency: "daily"|"weekly"|"monthly", interval: 1, endDate?: string, daysOfWeek?: [1,3,5], dayOfMonth?: 15, workdaysOnly: true }
+  metadata    Json? // 其他元数据
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, scheduledAt])
+  @@index([userId, eventType])
+  @@map("calendar_events")
+}
+
+// ============ 通知 ============
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String // price_alert | discipline_triggered | snapshot_failed | system
+  title     String
+  content   String
+  channels  Json // JSON: ["in_app", "email", "sms", "phone"] - 已发送的渠道
+  sentAt    DateTime @default(now()) @map("sent_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, sentAt])
+  @@index([userId, type])
+  @@map("notifications")
 }
